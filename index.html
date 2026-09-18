@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Taxi & Delivery App Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            yellow: '#fbc02d',
+                            yellowHover: '#f57f17',
+                            darkBg: '#0f1115',
+                            cardBg: '#1a1d24',
+                            cardBorder: '#2a2e39',
+                            mapDark: '#12141a',
+                            textMuted: '#9ea3b0'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #fbc02d;
+            background-image: radial-gradient(#d39e00 1px, transparent 1px);
+            background-size: 20px 20px;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .phone-frame {
+            width: 100%;
+            max-width: 420px;
+            height: 860px;
+            background-color: #0f1115;
+            border-radius: 48px;
+            box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 0 12px #1e222d;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: flex-col;
+            border: 2px solid #2a2e39;
+        }
+
+        .phone-notch {
+            position: absolute;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 120px;
+            height: 24px;
+            background-color: #000000;
+            border-radius: 20px;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 12px;
+        }
+
+        .phone-camera {
+            width: 10px;
+            height: 10px;
+            background-color: #1a1a1a;
+            border-radius: 50%;
+            border: 1px solid #333;
+        }
+
+        /* Dark CartoDB Map Styling */
+        .leaflet-container {
+            background-color: #12141a !important;
+            width: 100%;
+            height: 100%;
+        }
+
+        .leaflet-control-zoom, .leaflet-control-attribution {
+            display: none !important;
+        }
+
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: #2a2e39; border-radius: 4px; }
+
+        @keyframes pulse-yellow {
+            0% { box-shadow: 0 0 0 0 rgba(251, 192, 45, 0.6); }
+            70% { box-shadow: 0 0 0 15px rgba(251, 192, 45, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(251, 192, 45, 0); }
+        }
+
+        .yellow-pulse { animation: pulse-yellow 2s infinite; }
+
+        .taxi-checker {
+            background-image: 
+                linear-gradient(45deg, #000 25%, transparent 25%), 
+                linear-gradient(-45deg, #000 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, #000 75%), 
+                linear-gradient(-45deg, transparent 75%, #000 75%);
+            background-size: 24px 24px;
+            background-position: 0 0, 0 12px, 12px -12px, -12px 0px;
+        }
+
+        .glass-panel {
+            background: rgba(26, 29, 36, 0.92);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        /* Vehicle Pin Smooth Rotation Transition */
+        .vehicle-marker-icon {
+            transition: all 0.4s ease;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Mobile Frame Mockup -->
+    <div class="phone-frame shadow-2xl my-4">
+        <div class="phone-notch">
+            <div class="phone-camera"></div>
+        </div>
+
+        <!-- Main Screen Container -->
+        <div class="relative w-full h-full flex flex-col pt-8 bg-brand-darkBg text-white overflow-hidden">
+
+            <!-- SIDE DRAWER MENU -->
+            <div id="side-drawer" class="absolute inset-0 z-50 bg-black/70 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-300 flex">
+                <div id="drawer-content" class="w-3/4 h-full bg-brand-cardBg border-r border-brand-cardBorder p-6 flex flex-col justify-between transform -translate-x-full transition-transform duration-300">
+                    <div>
+                        <!-- User Profile Header -->
+                        <div class="flex items-center space-x-3 pb-6 border-b border-brand-cardBorder mb-6">
+                            <div class="w-12 h-12 rounded-full bg-brand-yellow text-black flex items-center justify-center font-bold text-xl">
+                                <i class="fa-solid fa-user"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-white text-base">Juan Pérez</h3>
+                                <p class="text-xs text-brand-yellow font-semibold"><i class="fa-solid fa-star text-[10px]"></i> 4.9 Pasajero</p>
+                            </div>
+                        </div>
+
+                        <!-- Menu Nav List -->
+                        <div class="space-y-4 text-sm font-semibold">
+                            <button onclick="switchScreen(1); closeSideMenu();" class="w-full flex items-center space-x-3 text-white hover:text-brand-yellow transition p-2 rounded-xl hover:bg-brand-darkBg">
+                                <i class="fa-solid fa-house w-6 text-brand-yellow"></i>
+                                <span>Inicio</span>
+                            </button>
+                            <button onclick="switchScreen(2); closeSideMenu();" class="w-full flex items-center space-x-3 text-white hover:text-brand-yellow transition p-2 rounded-xl hover:bg-brand-darkBg">
+                                <i class="fa-solid fa-map-location-dot w-6 text-brand-yellow"></i>
+                                <span>Pedir Viaje</span>
+                            </button>
+                            <button onclick="openHistoryModal()" class="w-full flex items-center space-x-3 text-white hover:text-brand-yellow transition p-2 rounded-xl hover:bg-brand-darkBg">
+                                <i class="fa-solid fa-clock-rotate-left w-6 text-brand-yellow"></i>
+                                <span>Historial de Viajes</span>
+                            </button>
+                            <button onclick="showToast('Soporte 24/7 disponible'); closeSideMenu();" class="w-full flex items-center space-x-3 text-white hover:text-brand-yellow transition p-2 rounded-xl hover:bg-brand-darkBg">
+                                <i class="fa-solid fa-headset w-6 text-brand-yellow"></i>
+                                <span>Soporte</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Logout Button -->
+                    <button onclick="showToast('Sesión cerrada'); closeSideMenu();" class="flex items-center space-x-3 text-red-400 font-bold text-sm p-2">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                        <span>Cerrar Sesión</span>
+                    </button>
+                </div>
+                <div class="flex-1" onclick="closeSideMenu()"></div>
+            </div>
+
+            <!-- TRIP HISTORY MODAL -->
+            <div id="history-modal" class="absolute inset-0 z-50 bg-brand-darkBg/95 p-6 flex flex-col justify-between opacity-0 pointer-events-none transition-opacity duration-300">
+                <div class="flex items-center justify-between border-b border-brand-cardBorder pb-4">
+                    <h2 class="text-lg font-extrabold text-white"><i class="fa-solid fa-clock-rotate-left text-brand-yellow mr-2"></i> Historial de Viajes</h2>
+                    <button onclick="closeHistoryModal()" class="w-8 h-8 rounded-full bg-brand-cardBg text-brand-yellow flex items-center justify-center">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <div class="flex-1 overflow-y-auto my-4 space-y-3" id="history-list-container">
+                    <!-- Dynamic trip history items -->
+                </div>
+
+                <button onclick="closeHistoryModal()" class="w-full bg-brand-yellow text-black font-bold py-3 rounded-xl">Volver</button>
+            </div>
+
+            <!-- SCREEN 1: WELCOME / ONBOARDING -->
+            <div id="screen-1" class="app-screen absolute inset-0 pt-10 pb-20 px-6 flex flex-col justify-between z-30 bg-brand-darkBg transition-all duration-300 transform opacity-100 translate-x-0">
+                <div class="flex items-center justify-between mt-2">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-11 h-11 rounded-full bg-brand-yellow flex items-center justify-center text-black font-bold text-xl shadow-md border-2 border-brand-yellow">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-brand-textMuted uppercase tracking-wider font-semibold">Bienvenido</p>
+                            <p class="text-base font-bold text-white leading-tight">Juan Pérez</p>
+                        </div>
+                    </div>
+                    <button onclick="openSideMenu()" class="w-10 h-10 rounded-full bg-brand-cardBg border border-brand-cardBorder flex items-center justify-center text-brand-yellow hover:bg-brand-cardBorder transition">
+                        <i class="fa-solid fa-bars-staggered"></i>
+                    </button>
+                </div>
+
+                <div class="flex flex-col items-center justify-center my-auto py-6">
+                    <h1 class="text-3xl font-black tracking-wider text-white mb-6 text-center uppercase">
+                        TAXI SERVICE
+                    </h1>
+
+                    <div class="relative w-52 h-52 rounded-full bg-brand-yellow flex items-center justify-center shadow-2xl border-4 border-yellow-300 yellow-pulse">
+                        <div class="w-36 h-36 rounded-full bg-brand-yellow flex items-center justify-center border-4 border-black/10">
+                            <div class="w-24 h-14 rounded-xl taxi-checker flex items-center justify-center shadow-inner"></div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Stats Badges -->
+                    <div class="flex space-x-3 mt-8">
+                        <span class="bg-brand-cardBg border border-brand-cardBorder px-3 py-1.5 rounded-full text-xs text-brand-yellow font-bold">
+                            <i class="fa-solid fa-bolt mr-1"></i> Viajes Rápidos
+                        </span>
+                        <span class="bg-brand-cardBg border border-brand-cardBorder px-3 py-1.5 rounded-full text-xs text-brand-yellow font-bold">
+                            <i class="fa-solid fa-shield-halved mr-1"></i> 100% Seguro
+                        </span>
+                    </div>
+
+                    <p class="text-center text-brand-textMuted text-xs mt-4 px-4 leading-relaxed">
+                        Selecciona Mototaxi, Taxi o Flete con geolocalización GPS en tiempo real y cálculo automático.
+                    </p>
+                </div>
+
+                <div class="w-full pb-2">
+                    <button onclick="switchScreen(2)" class="w-full bg-brand-yellow hover:bg-brand-yellowHover text-black font-extrabold py-4 px-6 rounded-2xl shadow-lg transition duration-200 transform active:scale-95 text-center text-base tracking-wider uppercase flex items-center justify-center space-x-2">
+                        <span>EMPEZAR AHORA</span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- SCREEN 2: MAP & LIVE TRIP BOOKING -->
+            <div id="screen-2" class="app-screen absolute inset-0 z-20 bg-brand-darkBg transition-all duration-300 transform opacity-0 translate-x-full pointer-events-none flex flex-col">
+                <!-- Top Map Header -->
+                <div class="absolute top-10 left-4 right-4 z-40 flex items-center justify-between pointer-events-auto">
+                    <button onclick="switchScreen(1)" class="w-10 h-10 rounded-full bg-brand-cardBg/90 backdrop-blur-md border border-brand-cardBorder flex items-center justify-center text-brand-yellow shadow-lg">
+                        <i class="fa-solid fa-arrow-left"></i>
+                    </button>
+                    <!-- Status Header Pill -->
+                    <div id="trip-status-badge" class="px-4 py-2 rounded-full glass-panel text-xs font-semibold text-white shadow-lg flex items-center space-x-2">
+                        <span id="status-dot" class="w-2.5 h-2.5 rounded-full bg-green-500 animate-ping"></span>
+                        <span id="status-text">Toca el mapa para fijar destino</span>
+                    </div>
+                    <button onclick="recenterMap()" class="w-10 h-10 rounded-full bg-brand-cardBg/90 backdrop-blur-md border border-brand-cardBorder flex items-center justify-center text-brand-yellow shadow-lg">
+                        <i class="fa-solid fa-location-crosshairs"></i>
+                    </button>
+                </div>
+
+                <!-- Interactive Leaflet Map Container -->
+                <div id="map-container" class="w-full h-full z-10"></div>
+
+                <!-- Bottom Floating Control Panel -->
+                <div class="absolute bottom-16 left-0 right-0 z-40 px-3 pb-2 pointer-events-auto">
+                    <div class="glass-panel rounded-3xl p-4 shadow-2xl border border-brand-cardBorder">
+                        
+                        <!-- Route Address Custom Inputs -->
+                        <div class="mb-3 space-y-2">
+                            <div class="flex items-center space-x-2 bg-brand-darkBg/90 p-2 rounded-xl border border-brand-cardBorder">
+                                <i class="fa-solid fa-circle-dot text-brand-yellow text-xs ml-1"></i>
+                                <input type="text" id="origin-address" value="Av. Bolívar #12" class="bg-transparent text-xs text-white w-full focus:outline-none font-medium" placeholder="Origen">
+                            </div>
+                            <div class="flex items-center space-x-2 bg-brand-darkBg/90 p-2 rounded-xl border border-brand-cardBorder">
+                                <i class="fa-solid fa-location-dot text-red-500 text-xs ml-1"></i>
+                                <input type="text" id="destination-address" value="Centro Plaza Comercial" class="bg-transparent text-xs text-white w-full focus:outline-none font-medium" placeholder="Destino (o haz clic en el mapa)">
+                            </div>
+                        </div>
+
+                        <!-- Vehicle Options Tab Grid -->
+                        <div class="grid grid-cols-3 gap-2 mb-3">
+                            <button onclick="selectRideType('moto')" id="ride-btn-moto" class="ride-option-btn active p-2 rounded-xl bg-brand-yellow text-black border-2 border-brand-yellow flex flex-col items-center justify-center transition">
+                                <i class="fa-solid fa-motorcycle text-lg mb-0.5"></i>
+                                <span class="text-[11px] font-bold">Mototaxi</span>
+                                <span id="price-moto" class="text-[9px] font-extrabold opacity-90">$3.50</span>
+                            </button>
+
+                            <button onclick="selectRideType('carro')" id="ride-btn-carro" class="ride-option-btn p-2 rounded-xl bg-brand-darkBg text-white border-2 border-brand-cardBorder flex flex-col items-center justify-center transition hover:border-brand-yellow/50">
+                                <i class="fa-solid fa-car text-lg mb-0.5 text-brand-yellow"></i>
+                                <span class="text-[11px] font-bold">Carro Taxi</span>
+                                <span id="price-carro" class="text-[9px] text-brand-textMuted font-semibold">$6.00</span>
+                            </button>
+
+                            <button onclick="selectRideType('flete')" id="ride-btn-flete" class="ride-option-btn p-2 rounded-xl bg-brand-darkBg text-white border-2 border-brand-cardBorder flex flex-col items-center justify-center transition hover:border-brand-yellow/50">
+                                <i class="fa-solid fa-truck-pickup text-lg mb-0.5 text-brand-yellow"></i>
+                                <span class="text-[11px] font-bold">Flete Carga</span>
+                                <span id="price-flete" class="text-[9px] text-brand-textMuted font-semibold">$15.00</span>
+                            </button>
+                        </div>
+
+                        <!-- Payment Method Selector -->
+                        <div class="flex items-center justify-between mb-3 bg-brand-darkBg/60 p-2 rounded-xl border border-brand-cardBorder">
+                            <span class="text-xs text-brand-textMuted font-bold">Método de Pago:</span>
+                            <select id="payment-method" class="bg-brand-cardBg text-white text-xs font-bold rounded-lg px-2 py-1 border border-brand-cardBorder focus:outline-none focus:border-brand-yellow">
+                                <option value="Efectivo">💵 Efectivo</option>
+                                <option value="Pago Móvil">📱 Pago Móvil / Wallet</option>
+                                <option value="Tarjeta">💳 Tarjeta de Crédito</option>
+                            </select>
+                        </div>
+
+                        <!-- Action Button / Live Controls -->
+                        <div id="booking-actions">
+                            <button onclick="startTripSimulation()" id="btn-start-trip" class="w-full bg-brand-yellow hover:bg-brand-yellowHover text-black font-extrabold py-3 px-4 rounded-xl shadow-lg transition duration-200 transform active:scale-95 text-center text-xs tracking-wider uppercase flex items-center justify-center space-x-2">
+                                <span>SOLICITAR AHORA</span>
+                                <span id="selected-price-badge" class="bg-black text-brand-yellow px-2 py-0.5 rounded-md text-xs font-extrabold ml-2">$3.50</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SCREEN 3: RATING, RECEIPT & FEEDBACK -->
+            <div id="screen-3" class="app-screen absolute inset-0 pt-10 pb-20 px-6 z-20 bg-brand-darkBg transition-all duration-300 transform opacity-0 translate-x-full pointer-events-none flex flex-col justify-between overflow-y-auto">
+                <div class="flex items-center justify-between mt-2">
+                    <button onclick="switchScreen(2)" class="w-8 h-8 rounded-full bg-brand-cardBg border border-brand-cardBorder flex items-center justify-center text-brand-yellow">
+                        <i class="fa-solid fa-arrow-left text-xs"></i>
+                    </button>
+                    <span class="text-xs font-bold tracking-wide uppercase text-brand-textMuted">Recibo y Reseña</span>
+                    <button onclick="switchScreen(1)" class="w-8 h-8 rounded-full bg-brand-cardBg border border-brand-cardBorder flex items-center justify-center text-brand-yellow">
+                        <i class="fa-solid fa-xmark text-xs"></i>
+                    </button>
+                </div>
+
+                <!-- Driver & Receipt Card -->
+                <div class="my-auto py-2 flex flex-col items-center">
+                    <div class="relative mb-3">
+                        <div class="w-20 h-20 rounded-full bg-brand-yellow flex items-center justify-center text-black font-bold text-3xl border-4 border-brand-cardBorder shadow-xl overflow-hidden">
+                            <i class="fa-solid fa-user-gear"></i>
+                        </div>
+                        <div class="absolute bottom-0 right-0 bg-green-500 text-white text-[10px] w-6 h-6 rounded-full flex items-center justify-center border-2 border-brand-darkBg">
+                            <i class="fa-solid fa-check"></i>
+                        </div>
+                    </div>
+
+                    <h2 class="text-lg font-bold text-white mb-0.5">Carlos Rodríguez</h2>
+                    <p class="text-[11px] text-brand-yellow font-semibold bg-brand-yellow/10 px-3 py-0.5 rounded-full mb-4 border border-brand-yellow/20">
+                        <i class="fa-solid fa-shield-halved mr-1"></i> Conductor Verificado
+                    </p>
+
+                    <!-- Receipt Breakdown -->
+                    <div class="w-full bg-brand-cardBg/90 border border-brand-cardBorder rounded-2xl p-4 mb-4 text-xs space-y-2">
+                        <div class="flex justify-between border-b border-brand-cardBorder pb-2 font-bold text-white">
+                            <span>Resumen del Viaje</span>
+                            <span class="text-brand-yellow" id="receipt-type">Mototaxi</span>
+                        </div>
+                        <div class="flex justify-between text-brand-textMuted">
+                            <span>Distancia recorrida:</span>
+                            <span id="receipt-distance" class="text-white">3.2 km</span>
+                        </div>
+                        <div class="flex justify-between text-brand-textMuted">
+                            <span>Método de pago:</span>
+                            <span id="receipt-payment" class="text-white">Efectivo</span>
+                        </div>
+                        <div class="flex justify-between font-extrabold text-sm text-white pt-1 border-t border-brand-cardBorder">
+                            <span>Monto Total:</span>
+                            <span id="receipt-total" class="text-brand-yellow">$3.50</span>
+                        </div>
+                    </div>
+
+                    <!-- Interactive Star Rating -->
+                    <div class="w-full bg-brand-cardBg/90 border border-brand-cardBorder rounded-2xl p-4 text-center shadow-xl mb-4">
+                        <h3 class="text-xs font-bold text-white mb-2">Califica a tu conductor</h3>
+
+                        <div class="flex justify-center space-x-2 text-2xl mb-4" id="star-rating">
+                            <i onclick="setRating(1)" class="fa-solid fa-star text-brand-yellow cursor-pointer transition transform hover:scale-125"></i>
+                            <i onclick="setRating(2)" class="fa-solid fa-star text-brand-yellow cursor-pointer transition transform hover:scale-125"></i>
+                            <i onclick="setRating(3)" class="fa-solid fa-star text-brand-yellow cursor-pointer transition transform hover:scale-125"></i>
+                            <i onclick="setRating(4)" class="fa-solid fa-star text-brand-yellow cursor-pointer transition transform hover:scale-125"></i>
+                            <i onclick="setRating(5)" class="fa-regular fa-star text-brand-textMuted cursor-pointer transition transform hover:scale-125"></i>
+                        </div>
+
+                        <!-- Quick Feedback Badges -->
+                        <div class="flex flex-wrap gap-1.5 justify-center mb-3">
+                            <button onclick="toggleTag(this)" class="tag-badge text-[10px] bg-brand-darkBg text-brand-textMuted px-2.5 py-1 rounded-full border border-brand-cardBorder">Excelente conduccion</button>
+                            <button onclick="toggleTag(this)" class="tag-badge text-[10px] bg-brand-darkBg text-brand-textMuted px-2.5 py-1 rounded-full border border-brand-cardBorder">Vehiculo limpio</button>
+                            <button onclick="toggleTag(this)" class="tag-badge text-[10px] bg-brand-darkBg text-brand-textMuted px-2.5 py-1 rounded-full border border-brand-cardBorder">Muy puntual</button>
+                        </div>
+
+                        <!-- Tip Selector -->
+                        <div class="flex items-center justify-between text-xs pt-2 border-t border-brand-cardBorder">
+                            <span class="text-brand-textMuted font-bold">Añadir Propina:</span>
+                            <div class="flex space-x-1.5">
+                                <button onclick="selectTip(0, this)" class="tip-btn text-[10px] bg-brand-yellow text-black font-bold px-2 py-1 rounded-lg">$0</button>
+                                <button onclick="selectTip(1, this)" class="tip-btn text-[10px] bg-brand-darkBg text-white px-2 py-1 rounded-lg border border-brand-cardBorder">$1</button>
+                                <button onclick="selectTip(2, this)" class="tip-btn text-[10px] bg-brand-darkBg text-white px-2 py-1 rounded-lg border border-brand-cardBorder">$2</button>
+                                <button onclick="selectTip(5, this)" class="tip-btn text-[10px] bg-brand-darkBg text-white px-2 py-1 rounded-lg border border-brand-cardBorder">$5</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button onclick="submitRatingAndFinish()" class="w-full bg-brand-yellow hover:bg-brand-yellowHover text-black font-extrabold py-3 px-6 rounded-xl shadow-lg transition duration-200 transform active:scale-95 text-center text-xs tracking-wider uppercase">
+                        FINALIZAR Y ENVIAR
+                    </button>
+                </div>
+            </div>
+
+            <!-- Global Bottom Nav -->
+            <div class="absolute bottom-0 left-0 right-0 h-16 bg-brand-cardBg border-t border-brand-cardBorder z-50 flex items-center justify-around px-2">
+                <button onclick="switchScreen(1)" id="nav-btn-1" class="flex flex-col items-center justify-center text-brand-yellow space-y-1 w-16">
+                    <i class="fa-solid fa-house text-lg"></i>
+                    <span class="text-[10px] font-bold">Inicio</span>
+                </button>
+                <button onclick="switchScreen(2)" id="nav-btn-2" class="flex flex-col items-center justify-center text-brand-textMuted hover:text-brand-yellow space-y-1 w-16 transition">
+                    <i class="fa-solid fa-map-location-dot text-lg"></i>
+                    <span class="text-[10px] font-bold">Mapa</span>
+                </button>
+                <button onclick="switchScreen(2)" class="relative -top-4 w-12 h-12 rounded-full bg-brand-yellow text-black flex items-center justify-center shadow-xl border-4 border-brand-darkBg font-extrabold text-xl hover:scale-105 transition">
+                    <i class="fa-solid fa-taxi"></i>
+                </button>
+                <button onclick="switchScreen(3)" id="nav-btn-3" class="flex flex-col items-center justify-center text-brand-textMuted hover:text-brand-yellow space-y-1 w-16 transition">
+                    <i class="fa-solid fa-receipt text-lg"></i>
+                    <span class="text-[10px] font-bold">Recibo</span>
+                </button>
+                <button onclick="openSideMenu()" class="flex flex-col items-center justify-center text-brand-textMuted hover:text-brand-yellow space-y-1 w-16 transition">
+                    <i class="fa-solid fa-gear text-lg"></i>
+                    <span class="text-[10px] font-bold">Ajustes</span>
+                </button>
+            </div>
+
+            <!-- Toast Alert -->
+            <div id="toast" class="absolute top-12 left-6 right-6 bg-brand-yellow text-black px-4 py-3 rounded-xl shadow-2xl font-bold text-xs flex items-center justify-between z-50 transition-all duration-300 transform -translate-y-20 opacity-0 pointer-events-none">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-circle-check text-base"></i>
+                    <span id="toast-message">Notificación</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Application State
+        let currentScreen = 1;
+        let selectedVehicle = 'moto';
+        let calculatedDistanceKm = 3.2;
+        let activePrice = 3.50;
+        let activeTip = 0;
+        let currentRating = 4;
+        let map = null;
+        let markerPickup = null;
+        let markerDropoff = null;
+        let vehicleMarker = null;
+        let routePolyline = null;
+        let tripInterval = null;
+        let tripState = 'idle'; // 'idle', 'searching', 'en_route', 'finished'
+
+        // Coordinates
+        let pickupCoords = [10.4806, -66.9036];
+        let dropoffCoords = [10.4950, -66.8800];
+
+        // Trip History Storage
+        let tripHistory = [
+            { id: '#4082', type: 'Mototaxi', price: '$3.50', date: 'Ayer, 4:30 PM', status: 'Completado' },
+            { id: '#3921', type: 'Carro Taxi', price: '$8.00', date: '15 Sep, 2:15 PM', status: 'Completado' }
+        ];
+
+        window.onload = function() {
+            initMap();
+            renderHistoryList();
+        };
+
+        // Screen Switcher Logic
+        function switchScreen(screenNum) {
+            currentScreen = screenNum;
+
+            for (let i = 1; i <= 3; i++) {
+                const screenEl = document.getElementById(`screen-${i}`);
+                const navBtn = document.getElementById(`nav-btn-${i}`);
+
+                screenEl.classList.add('opacity-0', 'pointer-events-none');
+                screenEl.classList.remove('opacity-100', 'translate-x-0');
+
+                if (i < screenNum) {
+                    screenEl.classList.add('-translate-x-full');
+                    screenEl.classList.remove('translate-x-full');
+                } else if (i > screenNum) {
+                    screenEl.classList.add('translate-x-full');
+                    screenEl.classList.remove('-translate-x-full');
+                }
+
+                if (navBtn) {
+                    navBtn.classList.remove('text-brand-yellow');
+                    navBtn.classList.add('text-brand-textMuted');
+                }
+            }
+
+            const targetScreen = document.getElementById(`screen-${screenNum}`);
+            targetScreen.classList.remove('opacity-0', 'translate-x-full', '-translate-x-full', 'pointer-events-none');
+            targetScreen.classList.add('opacity-100', 'translate-x-0');
+
+            const activeNavBtn = document.getElementById(`nav-btn-${screenNum}`);
+            if (activeNavBtn) {
+                activeNavBtn.classList.add('text-brand-yellow');
+                activeNavBtn.classList.remove('text-brand-textMuted');
+            }
+
+            if (screenNum === 2 && map) {
+                setTimeout(() => { map.invalidateSize(); }, 300);
+            }
+        }
+
+        // Initialize Map & Click Custom Destinations
+        function initMap() {
+            map = L.map('map-container', {
+                zoomControl: false,
+                attributionControl: false
+            }).setView([10.4878, -66.8918], 14);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19
+            }).addTo(map);
+
+            const yellowPinIcon = L.divIcon({
+                className: 'custom-pin',
+                html: `<div style="background-color: #fbc02d; width: 22px; height: 22px; border-radius: 50%; border: 3px solid black; box-shadow: 0 0 10px rgba(251,192,45,0.8);"></div>`,
+                iconSize: [22, 22]
+            });
+
+            const redPinIcon = L.divIcon({
+                className: 'custom-pin',
+                html: `<div style="background-color: #ef4444; width: 22px; height: 22px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(239,68,68,0.8);"></div>`,
+                iconSize: [22, 22]
+            });
+
+            markerPickup = L.marker(pickupCoords, { icon: yellowPinIcon }).addTo(map);
+            markerDropoff = L.marker(dropoffCoords, { icon: redPinIcon }).addTo(map);
+
+            updateRouteAndPrice();
+
+            // Map Click to Set New Destination
+            map.on('click', function(e) {
+                if (tripState !== 'idle') return;
+                dropoffCoords = [e.latlng.lat, e.latlng.lng];
+                markerDropoff.setLatLng(dropoffCoords);
+                document.getElementById('destination-address').value = `Lat: ${e.latlng.lat.toFixed(3)}, Lng: ${e.latlng.lng.toFixed(3)}`;
+                updateRouteAndPrice();
+                showToast('Destino actualizado en el mapa');
+            });
+        }
+
+        // Calculate Route Distance & Dynamic Fare
+        function updateRouteAndPrice() {
+            if (routePolyline) map.removeLayer(routePolyline);
+
+            // Distance calculation approximation
+            const latDiff = Math.abs(pickupCoords[0] - dropoffCoords[0]);
+            const lngDiff = Math.abs(pickupCoords[1] - dropoffCoords[1]);
+            calculatedDistanceKm = Math.max(1.2, ((latDiff + lngDiff) * 111).toFixed(1));
+
+            // Rates per km
+            const rates = { moto: { base: 2.0, km: 0.5 }, carro: { base: 4.0, km: 1.0 }, flete: { base: 10.0, km: 2.0 } };
+            
+            document.getElementById('price-moto').innerText = `$${(rates.moto.base + calculatedDistanceKm * rates.moto.km).toFixed(2)}`;
+            document.getElementById('price-carro').innerText = `$${(rates.carro.base + calculatedDistanceKm * rates.carro.km).toFixed(2)}`;
+            document.getElementById('price-flete').innerText = `$${(rates.flete.base + calculatedDistanceKm * rates.flete.km).toFixed(2)}`;
+
+            activePrice = parseFloat((rates[selectedVehicle].base + calculatedDistanceKm * rates[selectedVehicle].km).toFixed(2));
+            document.getElementById('selected-price-badge').innerText = `$${activePrice.toFixed(2)}`;
+
+            const routePoints = [
+                pickupCoords,
+                [(pickupCoords[0] + dropoffCoords[0]) / 2, pickupCoords[1]],
+                dropoffCoords
+            ];
+
+            routePolyline = L.polyline(routePoints, {
+                color: '#fbc02d',
+                weight: 5,
+                opacity: 0.9,
+                dashArray: '1, 3'
+            }).addTo(map);
+        }
+
+        function selectRideType(type) {
+            if (tripState !== 'idle') return;
+            selectedVehicle = type;
+
+            ['moto', 'carro', 'flete'].forEach(t => {
+                const btn = document.getElementById(`ride-btn-${t}`);
+                btn.className = 'ride-option-btn p-2 rounded-xl bg-brand-darkBg text-white border-2 border-brand-cardBorder flex flex-col items-center justify-center transition hover:border-brand-yellow/50';
+                btn.querySelector('i').className = btn.querySelector('i').className.replace('text-black', 'text-brand-yellow');
+            });
+
+            const selectedBtn = document.getElementById(`ride-btn-${type}`);
+            selectedBtn.className = 'ride-option-btn active p-2 rounded-xl bg-brand-yellow text-black border-2 border-brand-yellow flex flex-col items-center justify-center transition shadow-lg';
+            
+            updateRouteAndPrice();
+        }
+
+        // Live Real-Time GPS Vehicle Motion Simulation
+        function startTripSimulation() {
+            if (tripState !== 'idle') return;
+
+            tripState = 'searching';
+            const statusBadge = document.getElementById('status-text');
+            const statusDot = document.getElementById('status-dot');
+            statusBadge.innerText = 'Buscando conductor cercano...';
+            statusDot.className = 'w-2.5 h-2.5 rounded-full bg-yellow-500 animate-ping';
+
+            showToast('Solicitud enviada a conductores...');
+
+            setTimeout(() => {
+                tripState = 'en_route';
+                statusBadge.innerText = 'Conductor en camino...';
+                statusDot.className = 'w-2.5 h-2.5 rounded-full bg-blue-500 animate-ping';
+
+                // Icons depending on vehicle selection
+                const icons = {
+                    moto: 'fa-motorcycle',
+                    carro: 'fa-car',
+                    flete: 'fa-truck-pickup'
+                };
+
+                const vehicleIconHtml = L.divIcon({
+                    className: 'vehicle-marker-icon',
+                    html: `<div style="background-color: #fbc02d; color: black; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; border: 2px solid black; box-shadow: 0 0 15px rgba(251,192,45,1);"><i class="fa-solid ${icons[selectedVehicle]}"></i></div>`,
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 16]
+                });
+
+                let currentStep = 0;
+                const totalSteps = 40;
+                const startLat = pickupCoords[0];
+                const startLng = pickupCoords[1];
+                const endLat = dropoffCoords[0];
+                const endLng = dropoffCoords[1];
+
+                vehicleMarker = L.marker([startLat, startLng], { icon: vehicleIconHtml }).addTo(map);
+
+                // Update UI button to cancel/progress
+                document.getElementById('booking-actions').innerHTML = `
+                    <button onclick="cancelTrip()" class="w-full bg-red-600 hover:bg-red-700 text-white font-extrabold py-3 px-4 rounded-xl shadow-lg transition text-center text-xs tracking-wider uppercase">
+                        CANCELAR CARRERA
+                    </button>
+                `;
+
+                tripInterval = setInterval(() => {
+                    currentStep++;
+                    const progress = currentStep / totalSteps;
+
+                    const currLat = startLat + (endLat - startLat) * progress;
+                    const currLng = startLng + (endLng - startLng) * progress;
+
+                    vehicleMarker.setLatLng([currLat, currLng]);
+
+                    if (progress >= 0.5 && progress < 0.9) {
+                        statusBadge.innerText = 'En viaje hacia el destino...';
+                        statusDot.className = 'w-2.5 h-2.5 rounded-full bg-green-500 animate-ping';
+                    }
+
+                    if (currentStep >= totalSteps) {
+                        clearInterval(tripInterval);
+                        finishTrip();
+                    }
+                }, 150);
+
+            }, 2000);
+        }
+
+        function cancelTrip() {
+            if (tripInterval) clearInterval(tripInterval);
+            if (vehicleMarker) map.removeLayer(vehicleMarker);
+            tripState = 'idle';
+            document.getElementById('status-text').innerText = 'Toca el mapa para fijar destino';
+            document.getElementById('status-dot').className = 'w-2.5 h-2.5 rounded-full bg-green-500 animate-ping';
+            resetBookingActions();
+            showToast('Carrera cancelada');
+        }
+
+        function finishTrip() {
+            tripState = 'finished';
+            showToast('¡Has llegado a tu destino!');
+
+            // Populate Receipt Card Details
+            document.getElementById('receipt-type').innerText = selectedVehicle.toUpperCase();
+            document.getElementById('receipt-distance').innerText = `${calculatedDistanceKm} km`;
+            document.getElementById('receipt-payment').innerText = document.getElementById('payment-method').value;
+            const finalTotal = activePrice + activeTip;
+            document.getElementById('receipt-total').innerText = `$${finalTotal.toFixed(2)}`;
+
+            setTimeout(() => {
+                switchScreen(3);
+            }, 1000);
+        }
+
+        function resetBookingActions() {
+            document.getElementById('booking-actions').innerHTML = `
+                <button onclick="startTripSimulation()" id="btn-start-trip" class="w-full bg-brand-yellow hover:bg-brand-yellowHover text-black font-extrabold py-3 px-4 rounded-xl shadow-lg transition duration-200 transform active:scale-95 text-center text-xs tracking-wider uppercase flex items-center justify-center space-x-2">
+                    <span>SOLICITAR AHORA</span>
+                    <span id="selected-price-badge" class="bg-black text-brand-yellow px-2 py-0.5 rounded-md text-xs font-extrabold ml-2">$${activePrice.toFixed(2)}</span>
+                </button>
+            `;
+        }
+
+        // Tipping and Rating
+        function selectTip(amount, btn) {
+            activeTip = amount;
+            document.querySelectorAll('.tip-btn').forEach(b => {
+                b.className = 'tip-btn text-[10px] bg-brand-darkBg text-white px-2 py-1 rounded-lg border border-brand-cardBorder';
+            });
+            btn.className = 'tip-btn text-[10px] bg-brand-yellow text-black font-bold px-2 py-1 rounded-lg';
+            const finalTotal = activePrice + activeTip;
+            document.getElementById('receipt-total').innerText = `$${finalTotal.toFixed(2)}`;
+        }
+
+        function toggleTag(btn) {
+            btn.classList.toggle('bg-brand-yellow');
+            btn.classList.toggle('text-black');
+            btn.classList.toggle('font-bold');
+        }
+
+        function setRating(rating) {
+            currentRating = rating;
+            const stars = document.getElementById('star-rating').querySelectorAll('i');
+            stars.forEach((star, index) => {
+                star.className = index < rating ? 'fa-solid fa-star text-brand-yellow cursor-pointer' : 'fa-regular fa-star text-brand-textMuted cursor-pointer';
+            });
+        }
+
+        function submitRatingAndFinish() {
+            // Save to trip history array
+            tripHistory.unshift({
+                id: `#${Math.floor(1000 + Math.random() * 9000)}`,
+                type: selectedVehicle.toUpperCase(),
+                price: `$${(activePrice + activeTip).toFixed(2)}`,
+                date: 'Hoy, Ahora',
+                status: 'Completado'
+            });
+
+            renderHistoryList();
+            showToast('¡Gracias por tu calificación!');
+
+            // Reset Trip State
+            if (vehicleMarker) map.removeLayer(vehicleMarker);
+            tripState = 'idle';
+            resetBookingActions();
+            document.getElementById('status-text').innerText = 'Toca el mapa para fijar destino';
+
+            setTimeout(() => {
+                switchScreen(1);
+            }, 1200);
+        }
+
+        // Drawer Menu & History
+        function openSideMenu() {
+            document.getElementById('side-drawer').classList.remove('opacity-0', 'pointer-events-none');
+            document.getElementById('drawer-content').classList.remove('-translate-x-full');
+        }
+
+        function closeSideMenu() {
+            document.getElementById('side-drawer').classList.add('opacity-0', 'pointer-events-none');
+            document.getElementById('drawer-content').classList.add('-translate-x-full');
+        }
+
+        function openHistoryModal() {
+            closeSideMenu();
+            document.getElementById('history-modal').classList.remove('opacity-0', 'pointer-events-none');
+        }
+
+        function closeHistoryModal() {
+            document.getElementById('history-modal').classList.add('opacity-0', 'pointer-events-none');
+        }
+
+        function renderHistoryList() {
+            const container = document.getElementById('history-list-container');
+            container.innerHTML = tripHistory.map(item => `
+                <div class="bg-brand-cardBg border border-brand-cardBorder p-3 rounded-xl flex items-center justify-between text-xs">
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <span class="font-bold text-white">${item.type}</span>
+                            <span class="text-[10px] bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">${item.status}</span>
+                        </div>
+                        <p class="text-[10px] text-brand-textMuted mt-1">${item.date} • ${item.id}</p>
+                    </div>
+                    <span class="font-extrabold text-brand-yellow text-sm">${item.price}</span>
+                </div>
+            `).join('');
+        }
+
+        function recenterMap() {
+            if (map) {
+                map.setView([10.4878, -66.8918], 14);
+                showToast('Mapa centrado');
+            }
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-message').innerText = msg;
+            toast.classList.remove('-translate-y-20', 'opacity-0', 'pointer-events-none');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.add('-translate-y-20', 'opacity-0', 'pointer-events-none');
+                toast.classList.remove('translate-y-0', 'opacity-100');
+            }, 2200);
+        }
+    </script>
+</body>
+</html>
