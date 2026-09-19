@@ -55,7 +55,7 @@
             position: relative;
             overflow: hidden;
             display: flex;
-            flex-direction: flex-col;
+            flex-direction: column;
             border: 2px solid #2a2e39;
         }
 
@@ -83,11 +83,14 @@
             border: 1px solid #333;
         }
 
-        /* Dark CartoDB Map Styling */
         .leaflet-container {
             background-color: #12141a !important;
             width: 100%;
             height: 100%;
+        }
+
+        .dark-map-tiles {
+            filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7);
         }
 
         .leaflet-control-zoom, .leaflet-control-attribution {
@@ -105,33 +108,18 @@
 
         .yellow-pulse { animation: pulse-yellow 2s infinite; }
 
-        .taxi-checker {
-            background-image: 
-                linear-gradient(45deg, #000 25%, transparent 25%), 
-                linear-gradient(-45deg, #000 25%, transparent 25%), 
-                linear-gradient(45deg, transparent 75%, #000 75%), 
-                linear-gradient(-45deg, transparent 75%, #000 75%);
-            background-size: 24px 24px;
-            background-position: 0 0, 0 12px, 12px -12px, -12px 0px;
-        }
-
         .glass-panel {
             background: rgba(26, 29, 36, 0.92);
             backdrop-filter: blur(14px);
             -webkit-backdrop-filter: blur(14px);
             border: 1px solid rgba(255, 255, 255, 0.08);
         }
-
-        /* Vehicle Pin Smooth Rotation Transition */
-        .vehicle-marker-icon {
-            transition: all 0.4s ease;
-        }
     </style>
 </head>
 <body>
 
     <!-- Mobile Frame Mockup -->
-    <div class="phone-frame shadow-2xl my-4">
+    <div class="phone-frame shadow-2xl my-2">
         <div class="phone-notch">
             <div class="phone-camera"></div>
         </div>
@@ -139,302 +127,265 @@
         <!-- Main Screen Container -->
         <div class="relative w-full h-full flex flex-col pt-8 bg-brand-darkBg text-white overflow-hidden">
 
-            <!-- SIDE DRAWER MENU -->
-            <div id="side-drawer" class="absolute inset-0 z-50 bg-black/70 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-300 flex">
-                <div id="drawer-content" class="w-3/4 h-full bg-brand-cardBg border-r border-brand-cardBorder p-6 flex flex-col justify-between transform -translate-x-full transition-transform duration-300">
-                    <div>
-                        <!-- User Profile Header -->
-                        <div class="flex items-center space-x-3 pb-6 border-b border-brand-cardBorder mb-6">
-                            <div class="w-12 h-12 rounded-full bg-brand-yellow text-black flex items-center justify-center font-bold text-xl">
-                                <i class="fa-solid fa-user"></i>
-                            </div>
-                            <div>
-                                <h3 class="font-bold text-white text-base">Juan Pérez</h3>
-                                <p class="text-xs text-brand-yellow font-semibold"><i class="fa-solid fa-star text-[10px]"></i> 4.9 Pasajero</p>
-                            </div>
-                        </div>
-
-                        <!-- Menu Nav List -->
-                        <div class="space-y-4 text-sm font-semibold">
-                            <button onclick="switchScreen(1); closeSideMenu();" class="w-full flex items-center space-x-3 text-white hover:text-brand-yellow transition p-2 rounded-xl hover:bg-brand-darkBg">
-                                <i class="fa-solid fa-house w-6 text-brand-yellow"></i>
-                                <span>Inicio</span>
-                            </button>
-                            <button onclick="switchScreen(2); closeSideMenu();" class="w-full flex items-center space-x-3 text-white hover:text-brand-yellow transition p-2 rounded-xl hover:bg-brand-darkBg">
-                                <i class="fa-solid fa-map-location-dot w-6 text-brand-yellow"></i>
-                                <span>Pedir Viaje</span>
-                            </button>
-                            <button onclick="openHistoryModal()" class="w-full flex items-center space-x-3 text-white hover:text-brand-yellow transition p-2 rounded-xl hover:bg-brand-darkBg">
-                                <i class="fa-solid fa-clock-rotate-left w-6 text-brand-yellow"></i>
-                                <span>Historial de Viajes</span>
-                            </button>
-                            <button onclick="showToast('Soporte 24/7 disponible'); closeSideMenu();" class="w-full flex items-center space-x-3 text-white hover:text-brand-yellow transition p-2 rounded-xl hover:bg-brand-darkBg">
-                                <i class="fa-solid fa-headset w-6 text-brand-yellow"></i>
-                                <span>Soporte</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Logout Button -->
-                    <button onclick="showToast('Sesión cerrada'); closeSideMenu();" class="flex items-center space-x-3 text-red-400 font-bold text-sm p-2">
-                        <i class="fa-solid fa-right-from-bracket"></i>
-                        <span>Cerrar Sesión</span>
-                    </button>
-                </div>
-                <div class="flex-1" onclick="closeSideMenu()"></div>
-            </div>
-
-            <!-- TRIP HISTORY MODAL -->
-            <div id="history-modal" class="absolute inset-0 z-50 bg-brand-darkBg/95 p-6 flex flex-col justify-between opacity-0 pointer-events-none transition-opacity duration-300">
-                <div class="flex items-center justify-between border-b border-brand-cardBorder pb-4">
-                    <h2 class="text-lg font-extrabold text-white"><i class="fa-solid fa-clock-rotate-left text-brand-yellow mr-2"></i> Historial de Viajes</h2>
-                    <button onclick="closeHistoryModal()" class="w-8 h-8 rounded-full bg-brand-cardBg text-brand-yellow flex items-center justify-center">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
+            <!-- ========================================== -->
+            <!-- PANTALLA INITIAL: SELECCIÓN DE REGISTRO     -->
+            <!-- ========================================== -->
+            <div id="auth-welcome-screen" class="absolute inset-0 pt-10 pb-8 px-6 flex flex-col justify-between z-40 bg-brand-darkBg">
+                <div class="text-center mt-6">
+                    <h1 class="text-3xl font-black tracking-wider text-white uppercase mb-1">TAXI APP</h1>
+                    <p class="text-xs text-brand-textMuted font-semibold">Selecciona cómo deseas ingresar a la plataforma</p>
                 </div>
 
-                <div class="flex-1 overflow-y-auto my-4 space-y-3" id="history-list-container">
-                    <!-- Dynamic trip history items -->
-                </div>
-
-                <button onclick="closeHistoryModal()" class="w-full bg-brand-yellow text-black font-bold py-3 rounded-xl">Volver</button>
-            </div>
-
-            <!-- SCREEN 1: WELCOME / ONBOARDING -->
-            <div id="screen-1" class="app-screen absolute inset-0 pt-10 pb-20 px-6 flex flex-col justify-between z-30 bg-brand-darkBg transition-all duration-300 transform opacity-100 translate-x-0">
-                <div class="flex items-center justify-between mt-2">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-11 h-11 rounded-full bg-brand-yellow flex items-center justify-center text-black font-bold text-xl shadow-md border-2 border-brand-yellow">
+                <div class="my-auto space-y-4">
+                    <!-- Opción Registro Cliente -->
+                    <div onclick="openAuthModal('client')" class="bg-brand-cardBg border-2 border-brand-cardBorder hover:border-brand-yellow p-5 rounded-3xl cursor-pointer transition transform hover:-translate-y-1 shadow-xl flex items-center space-x-4">
+                        <div class="w-14 h-14 rounded-2xl bg-brand-yellow text-black flex items-center justify-center font-bold text-2xl shadow-lg">
                             <i class="fa-solid fa-user"></i>
                         </div>
                         <div>
-                            <p class="text-xs text-brand-textMuted uppercase tracking-wider font-semibold">Bienvenido</p>
-                            <p class="text-base font-bold text-white leading-tight">Juan Pérez</p>
+                            <h3 class="font-extrabold text-white text-base">Soy Pasajero / Cliente</h3>
+                            <p class="text-xs text-brand-textMuted leading-tight mt-0.5">Solicita carreras de Mototaxi, Carro o Fletes en tiempo real.</p>
                         </div>
                     </div>
-                    <button onclick="openSideMenu()" class="w-10 h-10 rounded-full bg-brand-cardBg border border-brand-cardBorder flex items-center justify-center text-brand-yellow hover:bg-brand-cardBorder transition">
-                        <i class="fa-solid fa-bars-staggered"></i>
+
+                    <!-- Opción Registro Conductor -->
+                    <div onclick="openAuthModal('driver')" class="bg-brand-cardBg border-2 border-brand-cardBorder hover:border-brand-yellow p-5 rounded-3xl cursor-pointer transition transform hover:-translate-y-1 shadow-xl flex items-center space-x-4">
+                        <div class="w-14 h-14 rounded-2xl bg-brand-yellow/10 border border-brand-yellow text-brand-yellow flex items-center justify-center font-bold text-2xl shadow-lg">
+                            <i class="fa-solid fa-id-card"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-extrabold text-white text-base">Soy Conductor / Chofer</h3>
+                            <p class="text-xs text-brand-textMuted leading-tight mt-0.5">Acepta viajes cercanos y genera ingresos diarios.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center">
+                    <button onclick="promptAdminLogin()" class="text-xs text-brand-textMuted hover:text-brand-yellow font-bold uppercase tracking-wider transition">
+                        <i class="fa-solid fa-user-shield mr-1"></i> Acceso Administrador
                     </button>
                 </div>
+            </div>
 
-                <div class="flex flex-col items-center justify-center my-auto py-6">
-                    <h1 class="text-3xl font-black tracking-wider text-white mb-6 text-center uppercase">
-                        TAXI SERVICE
-                    </h1>
-
-                    <div class="relative w-52 h-52 rounded-full bg-brand-yellow flex items-center justify-center shadow-2xl border-4 border-yellow-300 yellow-pulse">
-                        <div class="w-36 h-36 rounded-full bg-brand-yellow flex items-center justify-center border-4 border-black/10">
-                            <div class="w-24 h-14 rounded-xl taxi-checker flex items-center justify-center shadow-inner"></div>
+            <!-- ========================================== -->
+            <!-- VISTA DEL CLIENTE                          -->
+            <!-- ========================================== -->
+            <div id="view-client" class="hidden absolute inset-0 pt-8 flex flex-col z-20">
+                <!-- Sub-pantalla 1: Home Cliente -->
+                <div id="client-subscreen-home" class="h-full pt-4 pb-12 px-6 flex flex-col justify-between overflow-y-auto">
+                    <div class="flex items-center justify-between mt-2">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-11 h-11 rounded-full bg-brand-yellow text-black font-bold flex items-center justify-center text-xl overflow-hidden shadow-md" id="client-avatar-container">
+                                <i class="fa-solid fa-user"></i>
+                            </div>
+                            <div>
+                                <p class="text-[10px] text-brand-textMuted uppercase font-bold tracking-wider">Pasajero</p>
+                                <p class="text-base font-bold text-white leading-tight" id="client-display-name">Cliente</p>
+                            </div>
                         </div>
+                        <button onclick="logoutRole()" class="w-10 h-10 rounded-full bg-brand-cardBg border border-brand-cardBorder flex items-center justify-center text-red-400">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                        </button>
                     </div>
 
-                    <!-- Quick Stats Badges -->
-                    <div class="flex space-x-3 mt-8">
-                        <span class="bg-brand-cardBg border border-brand-cardBorder px-3 py-1.5 rounded-full text-xs text-brand-yellow font-bold">
-                            <i class="fa-solid fa-bolt mr-1"></i> Viajes Rápidos
-                        </span>
-                        <span class="bg-brand-cardBg border border-brand-cardBorder px-3 py-1.5 rounded-full text-xs text-brand-yellow font-bold">
-                            <i class="fa-solid fa-shield-halved mr-1"></i> 100% Seguro
-                        </span>
+                    <div class="flex flex-col items-center justify-center my-auto py-2">
+                        <div class="relative w-36 h-36 rounded-full bg-brand-yellow flex items-center justify-center shadow-2xl border-4 border-yellow-300 yellow-pulse mb-4">
+                            <i class="fa-solid fa-taxi text-4xl text-black"></i>
+                        </div>
+                        <h2 class="text-xl font-extrabold text-white text-center">¿A DÓNDE VAMOS HOY?</h2>
+                        <p class="text-center text-brand-textMuted text-xs px-4 mt-1">Ubicación GPS activa en tiempo real.</p>
                     </div>
 
-                    <p class="text-center text-brand-textMuted text-xs mt-4 px-4 leading-relaxed">
-                        Selecciona Mototaxi, Taxi o Flete con geolocalización GPS en tiempo real y cálculo automático.
-                    </p>
-                </div>
-
-                <div class="w-full pb-2">
-                    <button onclick="switchScreen(2)" class="w-full bg-brand-yellow hover:bg-brand-yellowHover text-black font-extrabold py-4 px-6 rounded-2xl shadow-lg transition duration-200 transform active:scale-95 text-center text-base tracking-wider uppercase flex items-center justify-center space-x-2">
-                        <span>EMPEZAR AHORA</span>
+                    <button onclick="openClientMap()" class="w-full bg-brand-yellow hover:bg-brand-yellowHover text-black font-extrabold py-4 px-6 rounded-2xl shadow-lg transition text-center text-sm tracking-wider uppercase flex items-center justify-center space-x-2">
+                        <span>PEDIR UN VIAJE</span>
                         <i class="fa-solid fa-arrow-right"></i>
                     </button>
                 </div>
-            </div>
 
-            <!-- SCREEN 2: MAP & LIVE TRIP BOOKING -->
-            <div id="screen-2" class="app-screen absolute inset-0 z-20 bg-brand-darkBg transition-all duration-300 transform opacity-0 translate-x-full pointer-events-none flex flex-col">
-                <!-- Top Map Header -->
-                <div class="absolute top-10 left-4 right-4 z-40 flex items-center justify-between pointer-events-auto">
-                    <button onclick="switchScreen(1)" class="w-10 h-10 rounded-full bg-brand-cardBg/90 backdrop-blur-md border border-brand-cardBorder flex items-center justify-center text-brand-yellow shadow-lg">
-                        <i class="fa-solid fa-arrow-left"></i>
-                    </button>
-                    <!-- Status Header Pill -->
-                    <div id="trip-status-badge" class="px-4 py-2 rounded-full glass-panel text-xs font-semibold text-white shadow-lg flex items-center space-x-2">
-                        <span id="status-dot" class="w-2.5 h-2.5 rounded-full bg-green-500 animate-ping"></span>
-                        <span id="status-text">Toca el mapa para fijar destino</span>
+                <!-- Sub-pantalla 2: Mapa y Pedido -->
+                <div id="client-subscreen-map" class="hidden absolute inset-0 z-20 bg-brand-darkBg flex flex-col">
+                    <div class="absolute top-10 left-4 right-4 z-40 flex items-center justify-between pointer-events-auto">
+                        <button onclick="closeClientMap()" class="w-10 h-10 rounded-full bg-brand-cardBg/90 border border-brand-cardBorder flex items-center justify-center text-brand-yellow">
+                            <i class="fa-solid fa-arrow-left"></i>
+                        </button>
+                        <div class="px-4 py-2 rounded-full glass-panel text-xs font-semibold text-white flex items-center space-x-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-green-500 animate-ping"></span>
+                            <span>Selecciona destino</span>
+                        </div>
                     </div>
-                    <button onclick="recenterMap()" class="w-10 h-10 rounded-full bg-brand-cardBg/90 backdrop-blur-md border border-brand-cardBorder flex items-center justify-center text-brand-yellow shadow-lg">
-                        <i class="fa-solid fa-location-crosshairs"></i>
-                    </button>
-                </div>
-
-                <!-- Interactive Leaflet Map Container -->
-                <div id="map-container" class="w-full h-full z-10"></div>
-
-                <!-- Bottom Floating Control Panel -->
-                <div class="absolute bottom-16 left-0 right-0 z-40 px-3 pb-2 pointer-events-auto">
-                    <div class="glass-panel rounded-3xl p-4 shadow-2xl border border-brand-cardBorder">
-                        
-                        <!-- Route Address Custom Inputs -->
-                        <div class="mb-3 space-y-2">
-                            <div class="flex items-center space-x-2 bg-brand-darkBg/90 p-2 rounded-xl border border-brand-cardBorder">
-                                <i class="fa-solid fa-circle-dot text-brand-yellow text-xs ml-1"></i>
-                                <input type="text" id="origin-address" value="Av. Bolívar #12" class="bg-transparent text-xs text-white w-full focus:outline-none font-medium" placeholder="Origen">
+                    <div id="map-container" class="w-full h-full z-10"></div>
+                    <div class="absolute bottom-4 left-0 right-0 z-40 px-3 pointer-events-auto">
+                        <div class="glass-panel rounded-3xl p-4 shadow-2xl border border-brand-cardBorder">
+                            <div class="grid grid-cols-3 gap-2 mb-3">
+                                <button onclick="selectVehicle('moto')" class="p-2 rounded-xl bg-brand-yellow text-black font-bold text-xs flex flex-col items-center">
+                                    <i class="fa-solid fa-motorcycle text-base"></i>
+                                    <span>Mototaxi</span>
+                                    <span>$3.50</span>
+                                </button>
+                                <button onclick="selectVehicle('carro')" class="p-2 rounded-xl bg-brand-darkBg text-white font-bold text-xs flex flex-col items-center border border-brand-cardBorder">
+                                    <i class="fa-solid fa-car text-base text-brand-yellow"></i>
+                                    <span>Carro Taxi</span>
+                                    <span>$6.00</span>
+                                </button>
+                                <button onclick="selectVehicle('flete')" class="p-2 rounded-xl bg-brand-darkBg text-white font-bold text-xs flex flex-col items-center border border-brand-cardBorder">
+                                    <i class="fa-solid fa-truck-pickup text-base text-brand-yellow"></i>
+                                    <span>Flete</span>
+                                    <span>$15.00</span>
+                                </button>
                             </div>
-                            <div class="flex items-center space-x-2 bg-brand-darkBg/90 p-2 rounded-xl border border-brand-cardBorder">
-                                <i class="fa-solid fa-location-dot text-red-500 text-xs ml-1"></i>
-                                <input type="text" id="destination-address" value="Centro Plaza Comercial" class="bg-transparent text-xs text-white w-full focus:outline-none font-medium" placeholder="Destino (o haz clic en el mapa)">
-                            </div>
-                        </div>
-
-                        <!-- Vehicle Options Tab Grid -->
-                        <div class="grid grid-cols-3 gap-2 mb-3">
-                            <button onclick="selectRideType('moto')" id="ride-btn-moto" class="ride-option-btn active p-2 rounded-xl bg-brand-yellow text-black border-2 border-brand-yellow flex flex-col items-center justify-center transition">
-                                <i class="fa-solid fa-motorcycle text-lg mb-0.5"></i>
-                                <span class="text-[11px] font-bold">Mototaxi</span>
-                                <span id="price-moto" class="text-[9px] font-extrabold opacity-90">$3.50</span>
-                            </button>
-
-                            <button onclick="selectRideType('carro')" id="ride-btn-carro" class="ride-option-btn p-2 rounded-xl bg-brand-darkBg text-white border-2 border-brand-cardBorder flex flex-col items-center justify-center transition hover:border-brand-yellow/50">
-                                <i class="fa-solid fa-car text-lg mb-0.5 text-brand-yellow"></i>
-                                <span class="text-[11px] font-bold">Carro Taxi</span>
-                                <span id="price-carro" class="text-[9px] text-brand-textMuted font-semibold">$6.00</span>
-                            </button>
-
-                            <button onclick="selectRideType('flete')" id="ride-btn-flete" class="ride-option-btn p-2 rounded-xl bg-brand-darkBg text-white border-2 border-brand-cardBorder flex flex-col items-center justify-center transition hover:border-brand-yellow/50">
-                                <i class="fa-solid fa-truck-pickup text-lg mb-0.5 text-brand-yellow"></i>
-                                <span class="text-[11px] font-bold">Flete Carga</span>
-                                <span id="price-flete" class="text-[9px] text-brand-textMuted font-semibold">$15.00</span>
-                            </button>
-                        </div>
-
-                        <!-- Payment Method Selector -->
-                        <div class="flex items-center justify-between mb-3 bg-brand-darkBg/60 p-2 rounded-xl border border-brand-cardBorder">
-                            <span class="text-xs text-brand-textMuted font-bold">Método de Pago:</span>
-                            <select id="payment-method" class="bg-brand-cardBg text-white text-xs font-bold rounded-lg px-2 py-1 border border-brand-cardBorder focus:outline-none focus:border-brand-yellow">
-                                <option value="Efectivo">💵 Efectivo</option>
-                                <option value="Pago Móvil">📱 Pago Móvil / Wallet</option>
-                                <option value="Tarjeta">💳 Tarjeta de Crédito</option>
-                            </select>
-                        </div>
-
-                        <!-- Action Button / Live Controls -->
-                        <div id="booking-actions">
-                            <button onclick="startTripSimulation()" id="btn-start-trip" class="w-full bg-brand-yellow hover:bg-brand-yellowHover text-black font-extrabold py-3 px-4 rounded-xl shadow-lg transition duration-200 transform active:scale-95 text-center text-xs tracking-wider uppercase flex items-center justify-center space-x-2">
-                                <span>SOLICITAR AHORA</span>
-                                <span id="selected-price-badge" class="bg-black text-brand-yellow px-2 py-0.5 rounded-md text-xs font-extrabold ml-2">$3.50</span>
+                            <button onclick="confirmTripRequest()" class="w-full bg-brand-yellow text-black font-extrabold py-3 rounded-xl text-xs uppercase">
+                                SOLICITAR AHORA
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- SCREEN 3: RATING, RECEIPT & FEEDBACK -->
-            <div id="screen-3" class="app-screen absolute inset-0 pt-10 pb-20 px-6 z-20 bg-brand-darkBg transition-all duration-300 transform opacity-0 translate-x-full pointer-events-none flex flex-col justify-between overflow-y-auto">
-                <div class="flex items-center justify-between mt-2">
-                    <button onclick="switchScreen(2)" class="w-8 h-8 rounded-full bg-brand-cardBg border border-brand-cardBorder flex items-center justify-center text-brand-yellow">
-                        <i class="fa-solid fa-arrow-left text-xs"></i>
-                    </button>
-                    <span class="text-xs font-bold tracking-wide uppercase text-brand-textMuted">Recibo y Reseña</span>
-                    <button onclick="switchScreen(1)" class="w-8 h-8 rounded-full bg-brand-cardBg border border-brand-cardBorder flex items-center justify-center text-brand-yellow">
-                        <i class="fa-solid fa-xmark text-xs"></i>
-                    </button>
-                </div>
-
-                <!-- Driver & Receipt Card -->
-                <div class="my-auto py-2 flex flex-col items-center">
-                    <div class="relative mb-3">
-                        <div class="w-20 h-20 rounded-full bg-brand-yellow flex items-center justify-center text-black font-bold text-3xl border-4 border-brand-cardBorder shadow-xl overflow-hidden">
-                            <i class="fa-solid fa-user-gear"></i>
-                        </div>
-                        <div class="absolute bottom-0 right-0 bg-green-500 text-white text-[10px] w-6 h-6 rounded-full flex items-center justify-center border-2 border-brand-darkBg">
-                            <i class="fa-solid fa-check"></i>
-                        </div>
-                    </div>
-
-                    <h2 class="text-lg font-bold text-white mb-0.5">Carlos Rodríguez</h2>
-                    <p class="text-[11px] text-brand-yellow font-semibold bg-brand-yellow/10 px-3 py-0.5 rounded-full mb-4 border border-brand-yellow/20">
-                        <i class="fa-solid fa-shield-halved mr-1"></i> Conductor Verificado
-                    </p>
-
-                    <!-- Receipt Breakdown -->
-                    <div class="w-full bg-brand-cardBg/90 border border-brand-cardBorder rounded-2xl p-4 mb-4 text-xs space-y-2">
-                        <div class="flex justify-between border-b border-brand-cardBorder pb-2 font-bold text-white">
-                            <span>Resumen del Viaje</span>
-                            <span class="text-brand-yellow" id="receipt-type">Mototaxi</span>
-                        </div>
-                        <div class="flex justify-between text-brand-textMuted">
-                            <span>Distancia recorrida:</span>
-                            <span id="receipt-distance" class="text-white">3.2 km</span>
-                        </div>
-                        <div class="flex justify-between text-brand-textMuted">
-                            <span>Método de pago:</span>
-                            <span id="receipt-payment" class="text-white">Efectivo</span>
-                        </div>
-                        <div class="flex justify-between font-extrabold text-sm text-white pt-1 border-t border-brand-cardBorder">
-                            <span>Monto Total:</span>
-                            <span id="receipt-total" class="text-brand-yellow">$3.50</span>
-                        </div>
-                    </div>
-
-                    <!-- Interactive Star Rating -->
-                    <div class="w-full bg-brand-cardBg/90 border border-brand-cardBorder rounded-2xl p-4 text-center shadow-xl mb-4">
-                        <h3 class="text-xs font-bold text-white mb-2">Califica a tu conductor</h3>
-
-                        <div class="flex justify-center space-x-2 text-2xl mb-4" id="star-rating">
-                            <i onclick="setRating(1)" class="fa-solid fa-star text-brand-yellow cursor-pointer transition transform hover:scale-125"></i>
-                            <i onclick="setRating(2)" class="fa-solid fa-star text-brand-yellow cursor-pointer transition transform hover:scale-125"></i>
-                            <i onclick="setRating(3)" class="fa-solid fa-star text-brand-yellow cursor-pointer transition transform hover:scale-125"></i>
-                            <i onclick="setRating(4)" class="fa-solid fa-star text-brand-yellow cursor-pointer transition transform hover:scale-125"></i>
-                            <i onclick="setRating(5)" class="fa-regular fa-star text-brand-textMuted cursor-pointer transition transform hover:scale-125"></i>
-                        </div>
-
-                        <!-- Quick Feedback Badges -->
-                        <div class="flex flex-wrap gap-1.5 justify-center mb-3">
-                            <button onclick="toggleTag(this)" class="tag-badge text-[10px] bg-brand-darkBg text-brand-textMuted px-2.5 py-1 rounded-full border border-brand-cardBorder">Excelente conduccion</button>
-                            <button onclick="toggleTag(this)" class="tag-badge text-[10px] bg-brand-darkBg text-brand-textMuted px-2.5 py-1 rounded-full border border-brand-cardBorder">Vehiculo limpio</button>
-                            <button onclick="toggleTag(this)" class="tag-badge text-[10px] bg-brand-darkBg text-brand-textMuted px-2.5 py-1 rounded-full border border-brand-cardBorder">Muy puntual</button>
-                        </div>
-
-                        <!-- Tip Selector -->
-                        <div class="flex items-center justify-between text-xs pt-2 border-t border-brand-cardBorder">
-                            <span class="text-brand-textMuted font-bold">Añadir Propina:</span>
-                            <div class="flex space-x-1.5">
-                                <button onclick="selectTip(0, this)" class="tip-btn text-[10px] bg-brand-yellow text-black font-bold px-2 py-1 rounded-lg">$0</button>
-                                <button onclick="selectTip(1, this)" class="tip-btn text-[10px] bg-brand-darkBg text-white px-2 py-1 rounded-lg border border-brand-cardBorder">$1</button>
-                                <button onclick="selectTip(2, this)" class="tip-btn text-[10px] bg-brand-darkBg text-white px-2 py-1 rounded-lg border border-brand-cardBorder">$2</button>
-                                <button onclick="selectTip(5, this)" class="tip-btn text-[10px] bg-brand-darkBg text-white px-2 py-1 rounded-lg border border-brand-cardBorder">$5</button>
+            <!-- ========================================== -->
+            <!-- VISTA DEL CONDUCTOR                        -->
+            <!-- ========================================== -->
+            <div id="view-driver" class="hidden absolute inset-0 pt-10 pb-6 px-6 flex flex-col justify-between overflow-y-auto z-20 bg-brand-darkBg">
+                <div>
+                    <div class="flex items-center justify-between border-b border-brand-cardBorder pb-4 mb-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-12 h-12 rounded-full bg-brand-yellow text-black font-bold flex items-center justify-center text-xl">
+                                <i class="fa-solid fa-user-gear"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-white text-sm" id="driver-display-name">Conductor</h3>
+                                <p class="text-[10px] text-brand-yellow font-semibold" id="driver-display-vehicle">Mototaxi • Verificado</p>
                             </div>
                         </div>
+                        <button onclick="logoutRole()" class="text-xs text-red-400 font-bold bg-brand-cardBg border border-brand-cardBorder px-2.5 py-1.5 rounded-xl">
+                            Salir
+                        </button>
                     </div>
 
-                    <button onclick="submitRatingAndFinish()" class="w-full bg-brand-yellow hover:bg-brand-yellowHover text-black font-extrabold py-3 px-6 rounded-xl shadow-lg transition duration-200 transform active:scale-95 text-center text-xs tracking-wider uppercase">
-                        FINALIZAR Y ENVIAR
-                    </button>
+                    <div class="grid grid-cols-2 gap-3 mb-4">
+                        <div class="bg-brand-cardBg border border-brand-cardBorder p-3 rounded-xl">
+                            <p class="text-[10px] text-brand-textMuted font-bold">Ganancias del Día</p>
+                            <p class="text-lg font-black text-brand-yellow">$35.00</p>
+                        </div>
+                        <div class="bg-brand-cardBg border border-brand-cardBorder p-3 rounded-xl">
+                            <p class="text-[10px] text-brand-textMuted font-bold">Viajes Aceptados</p>
+                            <p class="text-lg font-black text-white">8 Viajes</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-brand-cardBg border-2 border-brand-yellow p-4 rounded-2xl shadow-xl mb-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-[10px] bg-brand-yellow text-black font-extrabold px-2 py-0.5 rounded uppercase">Solicitud en Zona</span>
+                            <span class="text-xs font-bold text-brand-yellow">$4.50</span>
+                        </div>
+                        <div class="space-y-1 text-xs mb-3">
+                            <p class="text-white font-bold"><i class="fa-solid fa-circle-dot text-brand-yellow mr-1.5"></i> Origen: Calle 5 con Av. Principal</p>
+                            <p class="text-white font-bold"><i class="fa-solid fa-location-dot text-red-500 mr-1.5"></i> Destino: Centro Comercial</p>
+                        </div>
+                        <button onclick="showToast('¡Viaje aceptado! Dirígete al origen.')" class="w-full bg-brand-yellow text-black font-extrabold py-2.5 rounded-xl text-xs uppercase">
+                            ACEPTAR SOLICITUD
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <!-- Global Bottom Nav -->
-            <div class="absolute bottom-0 left-0 right-0 h-16 bg-brand-cardBg border-t border-brand-cardBorder z-50 flex items-center justify-around px-2">
-                <button onclick="switchScreen(1)" id="nav-btn-1" class="flex flex-col items-center justify-center text-brand-yellow space-y-1 w-16">
-                    <i class="fa-solid fa-house text-lg"></i>
-                    <span class="text-[10px] font-bold">Inicio</span>
-                </button>
-                <button onclick="switchScreen(2)" id="nav-btn-2" class="flex flex-col items-center justify-center text-brand-textMuted hover:text-brand-yellow space-y-1 w-16 transition">
-                    <i class="fa-solid fa-map-location-dot text-lg"></i>
-                    <span class="text-[10px] font-bold">Mapa</span>
-                </button>
-                <button onclick="switchScreen(2)" class="relative -top-4 w-12 h-12 rounded-full bg-brand-yellow text-black flex items-center justify-center shadow-xl border-4 border-brand-darkBg font-extrabold text-xl hover:scale-105 transition">
-                    <i class="fa-solid fa-taxi"></i>
-                </button>
-                <button onclick="switchScreen(3)" id="nav-btn-3" class="flex flex-col items-center justify-center text-brand-textMuted hover:text-brand-yellow space-y-1 w-16 transition">
-                    <i class="fa-solid fa-receipt text-lg"></i>
-                    <span class="text-[10px] font-bold">Recibo</span>
-                </button>
-                <button onclick="openSideMenu()" class="flex flex-col items-center justify-center text-brand-textMuted hover:text-brand-yellow space-y-1 w-16 transition">
-                    <i class="fa-solid fa-gear text-lg"></i>
-                    <span class="text-[10px] font-bold">Ajustes</span>
-                </button>
+            <!-- ========================================== -->
+            <!-- VISTA DEL ADMINISTRADOR                    -->
+            <!-- ========================================== -->
+            <div id="view-admin" class="hidden absolute inset-0 pt-10 pb-6 px-6 flex flex-col justify-between overflow-y-auto z-20 bg-brand-darkBg">
+                <div>
+                    <div class="flex items-center justify-between border-b border-brand-cardBorder pb-4 mb-4">
+                        <div>
+                            <h2 class="text-base font-extrabold text-white"><i class="fa-solid fa-user-shield text-brand-yellow mr-2"></i> Panel Administrador</h2>
+                            <p class="text-[10px] text-brand-textMuted">Gestión central de usuarios</p>
+                        </div>
+                        <button onclick="logoutRole()" class="text-xs text-red-400 font-bold bg-brand-cardBg border border-brand-cardBorder px-2.5 py-1.5 rounded-xl">
+                            Salir
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3 mb-4">
+                        <div class="bg-brand-cardBg border border-brand-cardBorder p-3 rounded-xl">
+                            <p class="text-[10px] text-brand-textMuted font-bold">Clientes</p>
+                            <p class="text-xl font-black text-brand-yellow" id="admin-clients-count">0</p>
+                        </div>
+                        <div class="bg-brand-cardBg border border-brand-cardBorder p-3 rounded-xl">
+                            <p class="text-[10px] text-brand-textMuted font-bold">Conductores</p>
+                            <p class="text-xl font-black text-white" id="admin-drivers-count">0</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2 mb-4">
+                        <h4 class="text-xs font-bold text-brand-textMuted uppercase">Clientes Registrados</h4>
+                        <div id="admin-clients-list" class="space-y-2"></div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <h4 class="text-xs font-bold text-brand-textMuted uppercase">Conductores Registrados</h4>
+                        <div id="admin-drivers-list" class="space-y-2"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODAL DE REGISTRO DINÁMICO -->
+            <div id="auth-modal" class="absolute inset-0 z-50 bg-brand-darkBg/95 p-6 flex flex-col justify-between opacity-0 pointer-events-none transition-opacity duration-300 overflow-y-auto">
+                <div>
+                    <div class="flex items-center justify-between border-b border-brand-cardBorder pb-4 mb-4">
+                        <h2 class="text-base font-extrabold text-white" id="auth-modal-title">Registro</h2>
+                        <button onclick="closeAuthModal()" class="w-8 h-8 rounded-full bg-brand-cardBg text-brand-yellow flex items-center justify-center">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+
+                    <form id="auth-form" onsubmit="handleRegistrationSubmit(event)" class="space-y-3 text-xs">
+                        <input type="hidden" id="auth-role-type">
+
+                        <div class="flex flex-col items-center justify-center my-2">
+                            <div class="relative w-16 h-16 rounded-full bg-brand-cardBg border-2 border-brand-yellow flex items-center justify-center overflow-hidden shadow-lg group">
+                                <img id="photo-preview" src="" class="w-full h-full object-cover hidden" alt="Preview">
+                                <i id="photo-placeholder" class="fa-solid fa-camera text-xl text-brand-yellow"></i>
+                                <input type="file" id="photo-input" accept="image/*" onchange="previewPhoto(event)" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full">
+                            </div>
+                            <span class="text-[10px] text-brand-yellow font-bold mt-1">Sube tu foto</span>
+                        </div>
+
+                        <div>
+                            <label class="block text-brand-textMuted font-bold mb-1">Nombre Completo</label>
+                            <input type="text" id="reg-name" required placeholder="Ej. Carlos Pérez" class="w-full bg-brand-cardBg border border-brand-cardBorder text-white p-2.5 rounded-xl">
+                        </div>
+
+                        <div>
+                            <label class="block text-brand-textMuted font-bold mb-1">Teléfono</label>
+                            <input type="tel" id="reg-phone" required placeholder="+58 412 0000000" class="w-full bg-brand-cardBg border border-brand-cardBorder text-white p-2.5 rounded-xl">
+                        </div>
+
+                        <!-- Campos específicos para Conductor -->
+                        <div id="driver-specific-fields" class="hidden space-y-3">
+                            <div>
+                                <label class="block text-brand-textMuted font-bold mb-1">Tipo de Vehículo</label>
+                                <select id="reg-vehicle" class="w-full bg-brand-cardBg border border-brand-cardBorder text-white p-2.5 rounded-xl font-bold">
+                                    <option value="Mototaxi">🏍️ Mototaxi</option>
+                                    <option value="Carro Taxi">🚗 Carro Taxi</option>
+                                    <option value="Flete Carga">🚚 Flete Carga</option>
+                                </select>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-brand-textMuted font-bold mb-1">Modelo</label>
+                                    <input type="text" id="reg-model" placeholder="Bera SBR 150" class="w-full bg-brand-cardBg border border-brand-cardBorder text-white p-2.5 rounded-xl">
+                                </div>
+                                <div>
+                                    <label class="block text-brand-textMuted font-bold mb-1">Placa</label>
+                                    <input type="text" id="reg-plate" placeholder="AA1B23C" class="w-full bg-brand-cardBg border border-brand-cardBorder text-white p-2.5 rounded-xl">
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="w-full bg-brand-yellow text-black font-extrabold py-3.5 rounded-xl uppercase tracking-wider shadow-lg transition mt-4">
+                            COMPLETAR REGISTRO
+                        </button>
+                    </form>
+                </div>
+                <button onclick="closeAuthModal()" class="w-full bg-brand-cardBg border border-brand-cardBorder text-white font-bold py-3 rounded-xl mt-4">Cancelar</button>
             </div>
 
             <!-- Toast Alert -->
@@ -449,371 +400,189 @@
     </div>
 
     <script>
-        // Application State
-        let currentScreen = 1;
-        let selectedVehicle = 'moto';
-        let calculatedDistanceKm = 3.2;
-        let activePrice = 3.50;
-        let activeTip = 0;
-        let currentRating = 4;
+        // System State Databases
+        let uploadedPhotoDataUrl = null;
         let map = null;
-        let markerPickup = null;
-        let markerDropoff = null;
-        let vehicleMarker = null;
-        let routePolyline = null;
-        let tripInterval = null;
-        let tripState = 'idle'; // 'idle', 'searching', 'en_route', 'finished'
 
-        // Coordinates
-        let pickupCoords = [10.4806, -66.9036];
-        let dropoffCoords = [10.4950, -66.8800];
-
-        // Trip History Storage
-        let tripHistory = [
-            { id: '#4082', type: 'Mototaxi', price: '$3.50', date: 'Ayer, 4:30 PM', status: 'Completado' },
-            { id: '#3921', type: 'Carro Taxi', price: '$8.00', date: '15 Sep, 2:15 PM', status: 'Completado' }
+        let clientsList = [
+            { name: "María Gómez", phone: "+58 412 8887766", photo: null }
         ];
 
-        window.onload = function() {
-            initMap();
-            renderHistoryList();
-        };
+        let driversList = [
+            { name: "Carlos Rodríguez", vehicle: "Mototaxi", model: "Bera SBR 150", plate: "AB123CD", photo: null }
+        ];
 
-        // Screen Switcher Logic
-        function switchScreen(screenNum) {
-            currentScreen = screenNum;
+        // Auth & Modal Handlers
+        function openAuthModal(roleType) {
+            document.getElementById('auth-role-type').value = roleType;
+            const title = document.getElementById('auth-modal-title');
+            const driverFields = document.getElementById('driver-specific-fields');
 
-            for (let i = 1; i <= 3; i++) {
-                const screenEl = document.getElementById(`screen-${i}`);
-                const navBtn = document.getElementById(`nav-btn-${i}`);
-
-                screenEl.classList.add('opacity-0', 'pointer-events-none');
-                screenEl.classList.remove('opacity-100', 'translate-x-0');
-
-                if (i < screenNum) {
-                    screenEl.classList.add('-translate-x-full');
-                    screenEl.classList.remove('translate-x-full');
-                } else if (i > screenNum) {
-                    screenEl.classList.add('translate-x-full');
-                    screenEl.classList.remove('-translate-x-full');
-                }
-
-                if (navBtn) {
-                    navBtn.classList.remove('text-brand-yellow');
-                    navBtn.classList.add('text-brand-textMuted');
-                }
+            if (roleType === 'client') {
+                title.innerText = 'Registro de Pasajero';
+                driverFields.classList.add('hidden');
+            } else {
+                title.innerText = 'Registro de Conductor';
+                driverFields.classList.remove('hidden');
             }
 
-            const targetScreen = document.getElementById(`screen-${screenNum}`);
-            targetScreen.classList.remove('opacity-0', 'translate-x-full', '-translate-x-full', 'pointer-events-none');
-            targetScreen.classList.add('opacity-100', 'translate-x-0');
-
-            const activeNavBtn = document.getElementById(`nav-btn-${screenNum}`);
-            if (activeNavBtn) {
-                activeNavBtn.classList.add('text-brand-yellow');
-                activeNavBtn.classList.remove('text-brand-textMuted');
-            }
-
-            if (screenNum === 2 && map) {
-                setTimeout(() => { map.invalidateSize(); }, 300);
-            }
+            document.getElementById('auth-modal').classList.remove('opacity-0', 'pointer-events-none');
         }
 
-        // Initialize Map & Click Custom Destinations
-        function initMap() {
-            map = L.map('map-container', {
-                zoomControl: false,
-                attributionControl: false
-            }).setView([10.4878, -66.8918], 14);
-
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19
-            }).addTo(map);
-
-            const yellowPinIcon = L.divIcon({
-                className: 'custom-pin',
-                html: `<div style="background-color: #fbc02d; width: 22px; height: 22px; border-radius: 50%; border: 3px solid black; box-shadow: 0 0 10px rgba(251,192,45,0.8);"></div>`,
-                iconSize: [22, 22]
-            });
-
-            const redPinIcon = L.divIcon({
-                className: 'custom-pin',
-                html: `<div style="background-color: #ef4444; width: 22px; height: 22px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(239,68,68,0.8);"></div>`,
-                iconSize: [22, 22]
-            });
-
-            markerPickup = L.marker(pickupCoords, { icon: yellowPinIcon }).addTo(map);
-            markerDropoff = L.marker(dropoffCoords, { icon: redPinIcon }).addTo(map);
-
-            updateRouteAndPrice();
-
-            // Map Click to Set New Destination
-            map.on('click', function(e) {
-                if (tripState !== 'idle') return;
-                dropoffCoords = [e.latlng.lat, e.latlng.lng];
-                markerDropoff.setLatLng(dropoffCoords);
-                document.getElementById('destination-address').value = `Lat: ${e.latlng.lat.toFixed(3)}, Lng: ${e.latlng.lng.toFixed(3)}`;
-                updateRouteAndPrice();
-                showToast('Destino actualizado en el mapa');
-            });
+        function closeAuthModal() {
+            document.getElementById('auth-modal').classList.add('opacity-0', 'pointer-events-none');
         }
 
-        // Calculate Route Distance & Dynamic Fare
-        function updateRouteAndPrice() {
-            if (routePolyline) map.removeLayer(routePolyline);
-
-            // Distance calculation approximation
-            const latDiff = Math.abs(pickupCoords[0] - dropoffCoords[0]);
-            const lngDiff = Math.abs(pickupCoords[1] - dropoffCoords[1]);
-            calculatedDistanceKm = Math.max(1.2, ((latDiff + lngDiff) * 111).toFixed(1));
-
-            // Rates per km
-            const rates = { moto: { base: 2.0, km: 0.5 }, carro: { base: 4.0, km: 1.0 }, flete: { base: 10.0, km: 2.0 } };
-            
-            document.getElementById('price-moto').innerText = `$${(rates.moto.base + calculatedDistanceKm * rates.moto.km).toFixed(2)}`;
-            document.getElementById('price-carro').innerText = `$${(rates.carro.base + calculatedDistanceKm * rates.carro.km).toFixed(2)}`;
-            document.getElementById('price-flete').innerText = `$${(rates.flete.base + calculatedDistanceKm * rates.flete.km).toFixed(2)}`;
-
-            activePrice = parseFloat((rates[selectedVehicle].base + calculatedDistanceKm * rates[selectedVehicle].km).toFixed(2));
-            document.getElementById('selected-price-badge').innerText = `$${activePrice.toFixed(2)}`;
-
-            const routePoints = [
-                pickupCoords,
-                [(pickupCoords[0] + dropoffCoords[0]) / 2, pickupCoords[1]],
-                dropoffCoords
-            ];
-
-            routePolyline = L.polyline(routePoints, {
-                color: '#fbc02d',
-                weight: 5,
-                opacity: 0.9,
-                dashArray: '1, 3'
-            }).addTo(map);
-        }
-
-        function selectRideType(type) {
-            if (tripState !== 'idle') return;
-            selectedVehicle = type;
-
-            ['moto', 'carro', 'flete'].forEach(t => {
-                const btn = document.getElementById(`ride-btn-${t}`);
-                btn.className = 'ride-option-btn p-2 rounded-xl bg-brand-darkBg text-white border-2 border-brand-cardBorder flex flex-col items-center justify-center transition hover:border-brand-yellow/50';
-                btn.querySelector('i').className = btn.querySelector('i').className.replace('text-black', 'text-brand-yellow');
-            });
-
-            const selectedBtn = document.getElementById(`ride-btn-${type}`);
-            selectedBtn.className = 'ride-option-btn active p-2 rounded-xl bg-brand-yellow text-black border-2 border-brand-yellow flex flex-col items-center justify-center transition shadow-lg';
-            
-            updateRouteAndPrice();
-        }
-
-        // Live Real-Time GPS Vehicle Motion Simulation
-        function startTripSimulation() {
-            if (tripState !== 'idle') return;
-
-            tripState = 'searching';
-            const statusBadge = document.getElementById('status-text');
-            const statusDot = document.getElementById('status-dot');
-            statusBadge.innerText = 'Buscando conductor cercano...';
-            statusDot.className = 'w-2.5 h-2.5 rounded-full bg-yellow-500 animate-ping';
-
-            showToast('Solicitud enviada a conductores...');
-
-            setTimeout(() => {
-                tripState = 'en_route';
-                statusBadge.innerText = 'Conductor en camino...';
-                statusDot.className = 'w-2.5 h-2.5 rounded-full bg-blue-500 animate-ping';
-
-                // Icons depending on vehicle selection
-                const icons = {
-                    moto: 'fa-motorcycle',
-                    carro: 'fa-car',
-                    flete: 'fa-truck-pickup'
+        function previewPhoto(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    uploadedPhotoDataUrl = e.target.result;
+                    document.getElementById('photo-preview').src = uploadedPhotoDataUrl;
+                    document.getElementById('photo-preview').classList.remove('hidden');
+                    document.getElementById('photo-placeholder').classList.add('hidden');
                 };
-
-                const vehicleIconHtml = L.divIcon({
-                    className: 'vehicle-marker-icon',
-                    html: `<div style="background-color: #fbc02d; color: black; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; border: 2px solid black; box-shadow: 0 0 15px rgba(251,192,45,1);"><i class="fa-solid ${icons[selectedVehicle]}"></i></div>`,
-                    iconSize: [32, 32],
-                    iconAnchor: [16, 16]
-                });
-
-                let currentStep = 0;
-                const totalSteps = 40;
-                const startLat = pickupCoords[0];
-                const startLng = pickupCoords[1];
-                const endLat = dropoffCoords[0];
-                const endLng = dropoffCoords[1];
-
-                vehicleMarker = L.marker([startLat, startLng], { icon: vehicleIconHtml }).addTo(map);
-
-                // Update UI button to cancel/progress
-                document.getElementById('booking-actions').innerHTML = `
-                    <button onclick="cancelTrip()" class="w-full bg-red-600 hover:bg-red-700 text-white font-extrabold py-3 px-4 rounded-xl shadow-lg transition text-center text-xs tracking-wider uppercase">
-                        CANCELAR CARRERA
-                    </button>
-                `;
-
-                tripInterval = setInterval(() => {
-                    currentStep++;
-                    const progress = currentStep / totalSteps;
-
-                    const currLat = startLat + (endLat - startLat) * progress;
-                    const currLng = startLng + (endLng - startLng) * progress;
-
-                    vehicleMarker.setLatLng([currLat, currLng]);
-
-                    if (progress >= 0.5 && progress < 0.9) {
-                        statusBadge.innerText = 'En viaje hacia el destino...';
-                        statusDot.className = 'w-2.5 h-2.5 rounded-full bg-green-500 animate-ping';
-                    }
-
-                    if (currentStep >= totalSteps) {
-                        clearInterval(tripInterval);
-                        finishTrip();
-                    }
-                }, 150);
-
-            }, 2000);
+                reader.readAsDataURL(file);
+            }
         }
 
-        function cancelTrip() {
-            if (tripInterval) clearInterval(tripInterval);
-            if (vehicleMarker) map.removeLayer(vehicleMarker);
-            tripState = 'idle';
-            document.getElementById('status-text').innerText = 'Toca el mapa para fijar destino';
-            document.getElementById('status-dot').className = 'w-2.5 h-2.5 rounded-full bg-green-500 animate-ping';
-            resetBookingActions();
-            showToast('Carrera cancelada');
+        function handleRegistrationSubmit(e) {
+            e.preventDefault();
+            const roleType = document.getElementById('auth-role-type').value;
+            const name = document.getElementById('reg-name').value;
+            const phone = document.getElementById('reg-phone').value;
+
+            if (roleType === 'client') {
+                const newClient = { name, phone, photo: uploadedPhotoDataUrl };
+                clientsList.unshift(newClient);
+                
+                // Set Client Profile & Render
+                document.getElementById('client-display-name').innerText = name;
+                if (uploadedPhotoDataUrl) {
+                    document.getElementById('client-avatar-container').innerHTML = `<img src="${uploadedPhotoDataUrl}" class="w-full h-full object-cover">`;
+                }
+
+                closeAuthModal();
+                showRoleView('client');
+                showToast(`¡Bienvenido Cliente ${name}!`);
+
+            } else if (roleType === 'driver') {
+                const vehicle = document.getElementById('reg-vehicle').value;
+                const model = document.getElementById('reg-model').value || 'S/M';
+                const plate = document.getElementById('reg-plate').value || 'S/P';
+
+                const newDriver = { name, phone, vehicle, model, plate, photo: uploadedPhotoDataUrl };
+                driversList.unshift(newDriver);
+
+                // Set Driver Profile & Render
+                document.getElementById('driver-display-name').innerText = name;
+                document.getElementById('driver-display-vehicle').innerText = `${vehicle} • ${model}`;
+
+                closeAuthModal();
+                showRoleView('driver');
+                showToast(`¡Bienvenido Conductor ${name}!`);
+            }
+
+            document.getElementById('auth-form').reset();
+            renderAdminDashboard();
         }
 
-        function finishTrip() {
-            tripState = 'finished';
-            showToast('¡Has llegado a tu destino!');
-
-            // Populate Receipt Card Details
-            document.getElementById('receipt-type').innerText = selectedVehicle.toUpperCase();
-            document.getElementById('receipt-distance').innerText = `${calculatedDistanceKm} km`;
-            document.getElementById('receipt-payment').innerText = document.getElementById('payment-method').value;
-            const finalTotal = activePrice + activeTip;
-            document.getElementById('receipt-total').innerText = `$${finalTotal.toFixed(2)}`;
-
-            setTimeout(() => {
-                switchScreen(3);
-            }, 1000);
+        function promptAdminLogin() {
+            const pin = prompt("Ingresa el PIN de Administrador:", "1234");
+            if (pin === "1234") {
+                renderAdminDashboard();
+                showRoleView('admin');
+                showToast("Acceso Administrador concedido");
+            } else if (pin !== null) {
+                showToast("PIN Incorrecto");
+            }
         }
 
-        function resetBookingActions() {
-            document.getElementById('booking-actions').innerHTML = `
-                <button onclick="startTripSimulation()" id="btn-start-trip" class="w-full bg-brand-yellow hover:bg-brand-yellowHover text-black font-extrabold py-3 px-4 rounded-xl shadow-lg transition duration-200 transform active:scale-95 text-center text-xs tracking-wider uppercase flex items-center justify-center space-x-2">
-                    <span>SOLICITAR AHORA</span>
-                    <span id="selected-price-badge" class="bg-black text-brand-yellow px-2 py-0.5 rounded-md text-xs font-extrabold ml-2">$${activePrice.toFixed(2)}</span>
-                </button>
-            `;
+        // Display View Switcher
+        function showRoleView(role) {
+            document.getElementById('auth-welcome-screen').classList.add('hidden');
+            document.getElementById('view-client').classList.add('hidden');
+            document.getElementById('view-driver').classList.add('hidden');
+            document.getElementById('view-admin').classList.add('hidden');
+
+            document.getElementById(`view-${role}`).classList.remove('hidden');
         }
 
-        // Tipping and Rating
-        function selectTip(amount, btn) {
-            activeTip = amount;
-            document.querySelectorAll('.tip-btn').forEach(b => {
-                b.className = 'tip-btn text-[10px] bg-brand-darkBg text-white px-2 py-1 rounded-lg border border-brand-cardBorder';
-            });
-            btn.className = 'tip-btn text-[10px] bg-brand-yellow text-black font-bold px-2 py-1 rounded-lg';
-            const finalTotal = activePrice + activeTip;
-            document.getElementById('receipt-total').innerText = `$${finalTotal.toFixed(2)}`;
+        function logoutRole() {
+            document.getElementById('auth-welcome-screen').classList.remove('hidden');
+            document.getElementById('view-client').classList.add('hidden');
+            document.getElementById('view-driver').classList.add('hidden');
+            document.getElementById('view-admin').classList.add('hidden');
+            showToast("Sesión cerrada");
         }
 
-        function toggleTag(btn) {
-            btn.classList.toggle('bg-brand-yellow');
-            btn.classList.toggle('text-black');
-            btn.classList.toggle('font-bold');
+        // Client Map Logic
+        function openClientMap() {
+            document.getElementById('client-subscreen-home').classList.add('hidden');
+            document.getElementById('client-subscreen-map').classList.remove('hidden');
+            if (!map) {
+                map = L.map('map-container', { zoomControl: false, attributionControl: false }).setView([10.4878, -66.8918], 14);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, className: 'dark-map-tiles' }).addTo(map);
+            }
         }
 
-        function setRating(rating) {
-            currentRating = rating;
-            const stars = document.getElementById('star-rating').querySelectorAll('i');
-            stars.forEach((star, index) => {
-                star.className = index < rating ? 'fa-solid fa-star text-brand-yellow cursor-pointer' : 'fa-regular fa-star text-brand-textMuted cursor-pointer';
-            });
+        function closeClientMap() {
+            document.getElementById('client-subscreen-home').classList.remove('hidden');
+            document.getElementById('client-subscreen-map').classList.add('hidden');
         }
 
-        function submitRatingAndFinish() {
-            // Save to trip history array
-            tripHistory.unshift({
-                id: `#${Math.floor(1000 + Math.random() * 9000)}`,
-                type: selectedVehicle.toUpperCase(),
-                price: `$${(activePrice + activeTip).toFixed(2)}`,
-                date: 'Hoy, Ahora',
-                status: 'Completado'
-            });
-
-            renderHistoryList();
-            showToast('¡Gracias por tu calificación!');
-
-            // Reset Trip State
-            if (vehicleMarker) map.removeLayer(vehicleMarker);
-            tripState = 'idle';
-            resetBookingActions();
-            document.getElementById('status-text').innerText = 'Toca el mapa para fijar destino';
-
-            setTimeout(() => {
-                switchScreen(1);
-            }, 1200);
+        function selectVehicle(type) {
+            showToast(`Vehículo seleccionado: ${type.toUpperCase()}`);
         }
 
-        // Drawer Menu & History
-        function openSideMenu() {
-            document.getElementById('side-drawer').classList.remove('opacity-0', 'pointer-events-none');
-            document.getElementById('drawer-content').classList.remove('-translate-x-full');
+        function confirmTripRequest() {
+            showToast("Buscando conductor en tiempo real...");
         }
 
-        function closeSideMenu() {
-            document.getElementById('side-drawer').classList.add('opacity-0', 'pointer-events-none');
-            document.getElementById('drawer-content').classList.add('-translate-x-full');
-        }
+        // Admin Dashboard Render
+        function renderAdminDashboard() {
+            document.getElementById('admin-clients-count').innerText = clientsList.length;
+            document.getElementById('admin-drivers-count').innerText = driversList.length;
 
-        function openHistoryModal() {
-            closeSideMenu();
-            document.getElementById('history-modal').classList.remove('opacity-0', 'pointer-events-none');
-        }
-
-        function closeHistoryModal() {
-            document.getElementById('history-modal').classList.add('opacity-0', 'pointer-events-none');
-        }
-
-        function renderHistoryList() {
-            const container = document.getElementById('history-list-container');
-            container.innerHTML = tripHistory.map(item => `
-                <div class="bg-brand-cardBg border border-brand-cardBorder p-3 rounded-xl flex items-center justify-between text-xs">
-                    <div>
-                        <div class="flex items-center space-x-2">
-                            <span class="font-bold text-white">${item.type}</span>
-                            <span class="text-[10px] bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">${item.status}</span>
+            const clientsContainer = document.getElementById('admin-clients-list');
+            clientsContainer.innerHTML = clientsList.map(c => `
+                <div class="bg-brand-cardBg border border-brand-cardBorder p-2.5 rounded-xl flex items-center justify-between text-xs">
+                    <div class="flex items-center space-x-2">
+                        <div class="w-7 h-7 rounded-full bg-brand-yellow text-black font-bold flex items-center justify-center text-xs overflow-hidden">
+                            ${c.photo ? `<img src="${c.photo}" class="w-full h-full object-cover">` : `<i class="fa-solid fa-user"></i>`}
                         </div>
-                        <p class="text-[10px] text-brand-textMuted mt-1">${item.date} • ${item.id}</p>
+                        <div>
+                            <p class="font-bold text-white">${c.name}</p>
+                            <p class="text-[9px] text-brand-textMuted">${c.phone}</p>
+                        </div>
                     </div>
-                    <span class="font-extrabold text-brand-yellow text-sm">${item.price}</span>
+                    <span class="text-[9px] text-green-400 font-bold">Activo</span>
+                </div>
+            `).join('');
+
+            const driversContainer = document.getElementById('admin-drivers-list');
+            driversContainer.innerHTML = driversList.map(d => `
+                <div class="bg-brand-cardBg border border-brand-cardBorder p-2.5 rounded-xl flex items-center justify-between text-xs">
+                    <div>
+                        <p class="font-bold text-white">${d.name}</p>
+                        <p class="text-[9px] text-brand-yellow">${d.vehicle} • ${d.model}</p>
+                    </div>
+                    <span class="font-mono text-[9px] bg-brand-darkBg px-1.5 py-0.5 rounded text-white">${d.plate}</span>
                 </div>
             `).join('');
         }
 
-        function recenterMap() {
-            if (map) {
-                map.setView([10.4878, -66.8918], 14);
-                showToast('Mapa centrado');
-            }
-        }
-
-        function showToast(msg) {
+        // Toast Helper
+        function showToast(message) {
             const toast = document.getElementById('toast');
-            document.getElementById('toast-message').innerText = msg;
+            document.getElementById('toast-message').innerText = message;
             toast.classList.remove('-translate-y-20', 'opacity-0', 'pointer-events-none');
             toast.classList.add('translate-y-0', 'opacity-100');
-
             setTimeout(() => {
                 toast.classList.add('-translate-y-20', 'opacity-0', 'pointer-events-none');
                 toast.classList.remove('translate-y-0', 'opacity-100');
-            }, 2200);
+            }, 2500);
         }
     </script>
 </body>
